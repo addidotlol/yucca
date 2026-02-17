@@ -1,15 +1,14 @@
 # yucca
 
-Simple Windows CLI to install and update the Helium browser.
+Simple Windows CLI to install and auto-update the [Helium browser](https://helium.computer).
 
 ## What it does
 
 - Installs Helium from official GitHub releases
 - Adds a Start Menu shortcut by default
 - Adds a Desktop shortcut by default
-- Can launch Helium through Yucca with a pre-launch update check
-- Start Menu launch runs hidden (no Yucca console window)
-- Checks for updates and installs newer versions
+- Launches Helium through Yucca with a pre-launch update check
+- Automatically applies updates when launching through the shortcut flow
 - Uninstalls Helium and cleans up shortcuts
 
 ## Build
