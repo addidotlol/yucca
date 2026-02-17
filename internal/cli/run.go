@@ -24,6 +24,8 @@ func Run(args []string) error {
 	switch args[0] {
 	case "install":
 		return runInstall(args[1:])
+	case "launch":
+		return runLaunch(args[1:])
 	case "update":
 		return runUpdate(args[1:])
 	case "status":
@@ -41,7 +43,8 @@ func Run(args []string) error {
 
 func runInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
-	desktopShortcut := fs.Bool("desktop-shortcut", false, "create desktop shortcut")
+	desktopShortcut := fs.Bool("desktop-shortcut", true, "create desktop shortcut (default: true)")
+	noDesktopShortcut := fs.Bool("no-desktop-shortcut", false, "skip desktop shortcut")
 	force := fs.Bool("force", false, "reinstall even if already up to date")
 	jsonOut := fs.Bool("json", false, "print JSON output")
 	quiet := fs.Bool("quiet", false, "suppress detailed progress output")
@@ -49,8 +52,10 @@ func runInstall(args []string) error {
 		return err
 	}
 
+	createDesktopShortcut := *desktopShortcut && !*noDesktopShortcut
+
 	st, err := helium.Install(context.Background(), helium.InstallOptions{
-		DesktopShortcut: *desktopShortcut,
+		DesktopShortcut: createDesktopShortcut,
 		Force:           *force,
 		Verbose:         !*jsonOut && !*quiet,
 	})
@@ -108,6 +113,15 @@ func runUpdate(args []string) error {
 		fmt.Printf("Helium version: %s\n", st.InstalledVersion)
 	}
 	return nil
+}
+
+func runLaunch(args []string) error {
+	fs := flag.NewFlagSet("launch", flag.ContinueOnError)
+	verbose := fs.Bool("verbose", false, "show update-check details before launch")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	return helium.Launch(context.Background(), helium.LaunchOptions{Verbose: *verbose})
 }
 
 func runStatus(args []string) error {
@@ -184,12 +198,14 @@ func printUsage() {
 		"",
 		"Commands:",
 		"  install    Install Helium and add Start Menu shortcut",
+		"  launch     Check updates and launch Helium",
 		"  update     Update Helium if a newer release exists",
 		"  status     Show installed and latest versions",
 		"  uninstall  Uninstall Helium and remove shortcuts",
 		"",
 		"Examples:",
 		"  yucca install --desktop-shortcut",
+		"  yucca launch",
 		"  yucca update --check-only",
 		"  yucca install --quiet",
 		"  yucca status",

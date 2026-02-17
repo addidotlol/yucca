@@ -11,7 +11,6 @@ import (
 
 const (
 	shortcutName = "Helium.lnk"
-	appName      = "Helium"
 )
 
 func StartMenuShortcutPath() (string, error) {
@@ -19,7 +18,7 @@ func StartMenuShortcutPath() (string, error) {
 	if appData == "" {
 		return "", fmt.Errorf("APPDATA is not set")
 	}
-	return filepath.Join(appData, "Microsoft", "Windows", "Start Menu", "Programs", appName, shortcutName), nil
+	return filepath.Join(appData, "Microsoft", "Windows", "Start Menu", "Programs", shortcutName), nil
 }
 
 func DesktopShortcutPath() (string, error) {
@@ -31,6 +30,10 @@ func DesktopShortcutPath() (string, error) {
 }
 
 func CreateStartMenuShortcut(targetPath string) error {
+	return CreateStartMenuShortcutAdvanced(targetPath, "", targetPath)
+}
+
+func CreateStartMenuShortcutAdvanced(targetPath, arguments, iconPath string) error {
 	p, err := StartMenuShortcutPath()
 	if err != nil {
 		return err
@@ -38,15 +41,19 @@ func CreateStartMenuShortcut(targetPath string) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err
 	}
-	return createShortcut(targetPath, p)
+	return createShortcut(targetPath, p, arguments, iconPath)
 }
 
 func CreateDesktopShortcut(targetPath string) error {
+	return CreateDesktopShortcutAdvanced(targetPath, "", targetPath)
+}
+
+func CreateDesktopShortcutAdvanced(targetPath, arguments, iconPath string) error {
 	p, err := DesktopShortcutPath()
 	if err != nil {
 		return err
 	}
-	return createShortcut(targetPath, p)
+	return createShortcut(targetPath, p, arguments, iconPath)
 }
 
 func RemoveStartMenuShortcut() error {
@@ -61,7 +68,6 @@ func RemoveStartMenuShortcut() error {
 			continue
 		}
 		candidates = append(candidates,
-			filepath.Join(root, appName, shortcutName),
 			filepath.Join(root, shortcutName),
 		)
 	}
@@ -91,7 +97,7 @@ func RemoveStartMenuShortcut() error {
 			}
 			return nil
 		})
-		_ = os.Remove(filepath.Join(root, appName))
+		_ = os.Remove(filepath.Join(root, "Helium"))
 	}
 
 	return nil
@@ -108,18 +114,22 @@ func RemoveDesktopShortcut() error {
 	return nil
 }
 
-func createShortcut(targetPath, shortcutPath string) error {
+func createShortcut(targetPath, shortcutPath, arguments, iconPath string) error {
 	targetPath = filepath.Clean(targetPath)
 	shortcutPath = filepath.Clean(shortcutPath)
 	workingDir := filepath.Dir(targetPath)
+	if iconPath == "" {
+		iconPath = targetPath
+	}
+	iconPath = filepath.Clean(iconPath)
 
 	escape := func(s string) string {
 		return strings.ReplaceAll(s, "'", "''")
 	}
 
 	script := fmt.Sprintf(
-		"$w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut('%s'); $s.TargetPath='%s'; $s.WorkingDirectory='%s'; $s.IconLocation='%s,0'; $s.Save()",
-		escape(shortcutPath), escape(targetPath), escape(workingDir), escape(targetPath),
+		"$w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut('%s'); $s.TargetPath='%s'; $s.Arguments='%s'; $s.WorkingDirectory='%s'; $s.IconLocation='%s,0'; $s.Save()",
+		escape(shortcutPath), escape(targetPath), escape(arguments), escape(workingDir), escape(iconPath),
 	)
 
 	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)

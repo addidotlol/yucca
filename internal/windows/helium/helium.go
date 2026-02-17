@@ -37,6 +37,10 @@ type UninstallOptions struct {
 	PurgeConfig bool
 }
 
+type LaunchOptions struct {
+	Verbose bool
+}
+
 type Status struct {
 	Installed        bool      `json:"installed"`
 	InstalledVersion string    `json:"installed_version"`
@@ -66,9 +70,12 @@ func Install(ctx context.Context, opts InstallOptions) (Status, error) {
 
 	st, _ := state.Load()
 	if !opts.Force {
-		if _, ok := detectInstallPath(st.InstallPath); ok {
+		if existingPath, ok := detectInstallPath(st.InstallPath); ok {
 			if version.Compare(st.InstalledVersion, rel.TagName) >= 0 {
 				logf(opts.Verbose, "Helium is already up to date.")
+				if err := ensureShortcuts(existingPath, opts.DesktopShortcut, opts.Verbose); err != nil {
+					return Status{}, err
+				}
 				return currentStatus(rel.TagName)
 			}
 		}
@@ -106,15 +113,8 @@ func Install(ctx context.Context, opts InstallOptions) (Status, error) {
 		return Status{}, errors.New("installation completed but helium executable not found")
 	}
 
-	logf(opts.Verbose, "Creating Start Menu shortcut...")
-	if err := shortcut.CreateStartMenuShortcut(installPath); err != nil {
-		return Status{}, fmt.Errorf("create start menu shortcut: %w", err)
-	}
-	if opts.DesktopShortcut {
-		logf(opts.Verbose, "Creating Desktop shortcut...")
-		if err := shortcut.CreateDesktopShortcut(installPath); err != nil {
-			return Status{}, fmt.Errorf("create desktop shortcut: %w", err)
-		}
+	if err := ensureShortcuts(installPath, opts.DesktopShortcut, opts.Verbose); err != nil {
+		return Status{}, err
 	}
 
 	newState := state.State{
@@ -168,6 +168,7 @@ func Uninstall(ctx context.Context, opts UninstallOptions) (bool, error) {
 		if opts.PurgeConfig {
 			_ = state.Delete()
 		}
+		_ = os.Remove(launcherScriptPath())
 		return false, nil
 	}
 
@@ -213,6 +214,7 @@ func Uninstall(ctx context.Context, opts UninstallOptions) (bool, error) {
 	} else {
 		_ = state.Save(state.State{})
 	}
+	_ = os.Remove(launcherScriptPath())
 
 	return true, nil
 }
@@ -223,6 +225,28 @@ func CurrentStatus(ctx context.Context) (Status, error) {
 	}
 	_ = ctx
 	return currentStatus("")
+}
+
+func Launch(ctx context.Context, opts LaunchOptions) error {
+	if err := ensureWindows(); err != nil {
+		return err
+	}
+
+	if _, err := Update(ctx, UpdateOptions{Verbose: opts.Verbose}); err != nil {
+		logf(opts.Verbose, "Update check failed, launching anyway: %v", err)
+	}
+
+	st, _ := state.Load()
+	installPath, ok := detectInstallPath(st.InstallPath)
+	if !ok {
+		return errors.New("helium executable not found")
+	}
+
+	cmd := exec.CommandContext(ctx, installPath)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("launch helium failed: %w", err)
+	}
+	return nil
 }
 
 func currentStatus(latestHint string) (Status, error) {
@@ -605,11 +629,79 @@ func windowsArch() string {
 	}
 }
 
+func shortcutLaunchTarget(fallbackInstallPath string) (target string, arguments string) {
+	if exe, err := os.Executable(); err == nil {
+		exe = filepath.Clean(exe)
+		if strings.EqualFold(filepath.Ext(exe), ".exe") {
+			if scriptPath, err := writeHiddenLauncherScript(exe); err == nil {
+				return wscriptPath(), fmt.Sprintf("\"%s\"", scriptPath)
+			}
+			return exe, "launch"
+		}
+	}
+	return fallbackInstallPath, ""
+}
+
+func launcherScriptPath() string {
+	local := os.Getenv("LOCALAPPDATA")
+	if local == "" {
+		return ""
+	}
+	return filepath.Join(local, "Yucca", "launch.vbs")
+}
+
+func writeHiddenLauncherScript(yuccaExePath string) (string, error) {
+	scriptPath := launcherScriptPath()
+	if scriptPath == "" {
+		return "", errors.New("LOCALAPPDATA is not set")
+	}
+	if err := os.MkdirAll(filepath.Dir(scriptPath), 0o755); err != nil {
+		return "", err
+	}
+	escape := func(s string) string {
+		return strings.ReplaceAll(s, `"`, `""`)
+	}
+	content := strings.Join([]string{
+		`Set shell = CreateObject("WScript.Shell")`,
+		fmt.Sprintf(`cmd = """%s"" launch"`, escape(yuccaExePath)),
+		`shell.Run cmd, 0, False`,
+	}, "\r\n") + "\r\n"
+	if err := os.WriteFile(scriptPath, []byte(content), 0o644); err != nil {
+		return "", err
+	}
+	return scriptPath, nil
+}
+
+func wscriptPath() string {
+	if root := os.Getenv("SystemRoot"); root != "" {
+		p := filepath.Join(root, "System32", "wscript.exe")
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return "wscript.exe"
+}
+
 func logf(verbose bool, format string, args ...any) {
 	if !verbose {
 		return
 	}
 	fmt.Printf(format+"\n", args...)
+}
+
+func ensureShortcuts(installPath string, desktopShortcut bool, verbose bool) error {
+	launcherTarget, launcherArgs := shortcutLaunchTarget(installPath)
+	logf(verbose, "Creating Start Menu shortcut...")
+	if err := shortcut.CreateStartMenuShortcutAdvanced(launcherTarget, launcherArgs, installPath); err != nil {
+		return fmt.Errorf("create start menu shortcut: %w", err)
+	}
+	if desktopShortcut {
+		logf(verbose, "Creating Desktop shortcut...")
+		if err := shortcut.CreateDesktopShortcutAdvanced(launcherTarget, launcherArgs, installPath); err != nil {
+			return fmt.Errorf("create desktop shortcut: %w", err)
+		}
+	}
+	return nil
 }
 
 func ensureWindows() error {

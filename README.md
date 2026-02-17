@@ -6,7 +6,9 @@ Simple Windows CLI to install and update the Helium browser.
 
 - Installs Helium from official GitHub releases
 - Adds a Start Menu shortcut by default
-- Can add a Desktop shortcut
+- Adds a Desktop shortcut by default
+- Can launch Helium through Yucca with a pre-launch update check
+- Start Menu launch runs hidden (no Yucca console window)
 - Checks for updates and installs newer versions
 - Uninstalls Helium and cleans up shortcuts
 
@@ -26,6 +28,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 
 ```bash
 yucca install
+yucca launch
 yucca status
 yucca update
 yucca uninstall
@@ -33,7 +36,8 @@ yucca uninstall
 
 ## Commands
 
-- `yucca install [--desktop-shortcut] [--force] [--quiet] [--json]`
+- `yucca install [--desktop-shortcut] [--no-desktop-shortcut] [--force] [--quiet] [--json]`
+- `yucca launch [--verbose]`
 - `yucca update [--check-only] [--force] [--quiet] [--json]`
 - `yucca status [--json]`
 - `yucca uninstall [--purge-config] [--json]`
@@ -42,3 +46,4 @@ yucca uninstall
 
 - Windows only (since other platforms have auto update support)
 - State file: `%LOCALAPPDATA%\Yucca\state.json`
+- Run `yucca install --force` once to refresh old shortcuts to use `yucca launch`.
