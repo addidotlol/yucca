@@ -40,5 +40,5 @@ yucca uninstall
 
 ## Notes
 
-- Windows only
+- Windows only (since other platforms have auto update support)
 - State file: `%LOCALAPPDATA%\Yucca\state.json`
