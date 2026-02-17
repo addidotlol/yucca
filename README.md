@@ -47,4 +47,3 @@ yucca uninstall
 
 - Windows only (since other platforms have auto update support)
 - State file: `%LOCALAPPDATA%\Yucca\state.json`
-- Run `yucca install --force` once to refresh old shortcuts to use `yucca launch`.
