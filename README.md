@@ -2,7 +2,15 @@
 
 Simple Windows CLI to install and auto-update the [Helium browser](https://helium.computer).
 
-## [Download Latest](https://github.com/addidotlol/yucca/releases/latest/download/yucca.exe)
+## [I DONT GIVE A 🐕 ABOUT THE 🐕ING CODE!](https://github.com/addidotlol/yucca/releases/latest/download/yucca.exe)
+
+## TL;DR
+
+- Download `yucca` above.
+- Place somewhere nice and safe
+- Open terminal where it is
+- `./yucca.exe install`
+- Run Helium, now you have auto updates
 
 ## What it does
 
