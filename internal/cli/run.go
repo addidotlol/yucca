@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/addidotlol/yucca/internal/meta"
 	"github.com/addidotlol/yucca/internal/windows/helium"
 )
 
 func Run(args []string) error {
+	if shouldPrintHeader(args) {
+		fmt.Printf("%s %s - %s\n", meta.HeaderPrefix, meta.Version, meta.Copyright)
+	}
+
 	if len(args) == 0 {
 		printUsage()
 		return nil
@@ -200,4 +205,13 @@ func printJSON(v any) error {
 	}
 	fmt.Println(string(b))
 	return nil
+}
+
+func shouldPrintHeader(args []string) bool {
+	for _, a := range args {
+		if a == "--json" {
+			return false
+		}
+	}
+	return true
 }

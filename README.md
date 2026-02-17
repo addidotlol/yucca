@@ -16,6 +16,12 @@ Simple Windows CLI to install and update the Helium browser.
 go build -o yucca.exe ./cmd/yucca
 ```
 
+Build with version from current git tag/commit:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
+```
+
 ## Quick start
 
 ```bash
