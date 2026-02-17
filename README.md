@@ -2,7 +2,7 @@
 
 Simple Windows CLI to install and auto-update the [Helium browser](https://helium.computer).
 
-## [I DONT GIVE A 🐕 ABOUT THE 🐕ING CODE!](https://github.com/addidotlol/yucca/releases/latest/download/yucca.exe)
+## [I DONT GIVE A 🐕 ABOUT THE 🐕ING CODE! (download latest)](https://github.com/addidotlol/yucca/releases/latest/download/yucca.exe)
 
 ## TL;DR
 
